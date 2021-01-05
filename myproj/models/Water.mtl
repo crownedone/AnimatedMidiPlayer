@@ -1,0 +1,15 @@
+# Blender MTL File: 'Water.blend'
+# Material Count: 1
+
+newmtl /Game/TropicalIslandLP/Materials/Water01Mat_Water01Mat.001
+Ns 96.078443
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Bump C:\\Users\\steff\\ESIEEWorkspace\\CGOpenGL\\nicolas-stephane-2017\\myproj\\models\\Water01Mat_Water01Mat_N.bmp
+map_Kd C:\\Users\\steff\\ESIEEWorkspace\\CGOpenGL\\nicolas-stephane-2017\\myproj\\models\\Water01Mat_Water01Mat_D.bmp
+map_Ks C:\\Users\\steff\\ESIEEWorkspace\\CGOpenGL\\nicolas-stephane-2017\\myproj\\models\\Water01Mat_Water01Mat_S.bmp

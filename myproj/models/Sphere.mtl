@@ -1,0 +1,12 @@
+# Blender MTL File: 'piano_body_pipes.blend'
+# Material Count: 1
+
+newmtl Material
+Ns 283.343093
+Ka 1.000000 1.000000 1.000000
+Kd 0.854901 0.647058 0.125490
+Ks 0.001608 0.001608 0.001608
+Ke 0.033104 0.033104 0.033104
+Ni 1.450000
+d 1.000000
+illum 2

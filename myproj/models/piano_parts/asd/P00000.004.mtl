@@ -1,0 +1,12 @@
+# Blender MTL File: 'piano_sep_keys_w_pipe.blend'
+# Material Count: 1
+
+newmtl M_Pipe.006
+Ns 225.000000
+Ka 0.906752 0.906752 0.906752
+Kd 0.132866 0.070415 0.036819
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
