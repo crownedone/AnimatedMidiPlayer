@@ -4,7 +4,7 @@
 #include "cxxmidi/player/synchronous.hpp"
 #include "cxxmidi/note.hpp"
 
-
+#include <boost/filesystem.hpp>
 
 #include <fstream>
 #include <string>
@@ -392,13 +392,27 @@ inline bool isKey(const string& str)
 
 int main(int argc, char* argv[])
 {
+    if (argc < 2)
+    {
+        cout << "Please specify a midi file to play!\n";
+        return -1;
+    }
+
+    string fileName = argv[1];
+    boost::filesystem::path fileP = fileName;
+    if (!boost::filesystem::exists(fileP) || fileP.extension() != ".mid")
+    {
+        cout << "File: " << fileP.string() << " is not a valid midi file\n";
+        return -1;
+    }
+
     auto custout = new CustomOutput();
     CxxMidi::Player::Synchronous splayer(new CxxMidi::Output::Default(0));
     CxxMidi::Player::Synchronous splayer2(custout);
 
     // dont now how concurrency works within cxxmidi: better to load file 2 times
-    auto file = std::make_shared<CxxMidi::File>("test.mid");
-    auto file2 = std::make_shared<CxxMidi::File>("test.mid");
+    auto file = std::make_shared<CxxMidi::File>(fileP.string().c_str());
+    auto file2 = std::make_shared<CxxMidi::File>(fileP.string().c_str());
     splayer.setFile(file.get());
     splayer2.setFile(file2.get());
 

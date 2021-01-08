@@ -87,3 +87,9 @@ add_custom_command(
              ${CMAKE_CURRENT_SOURCE_DIR}/myproj/models ${CMAKE_CURRENT_BINARY_DIR}/models
          COMMENT "Copying models" VERBATIM
          )
+add_custom_command(
+         TARGET ${PROJECT_NAME} POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_directory             
+             ${CMAKE_CURRENT_SOURCE_DIR}/myproj/midi ${CMAKE_CURRENT_BINARY_DIR}/
+         COMMENT "Copying models" VERBATIM
+         )
