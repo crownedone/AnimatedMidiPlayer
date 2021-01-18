@@ -45,6 +45,9 @@ public:
     void scale(glm::vec3);
     void rotate(glm::vec3, float);
 
+    // gets position from model_matrix (relative to model, that is only changing if the model is translated)
+    glm::vec3 getPos() const;
+
     void computeTexturecoordinates_plane();
     void computeTexturecoordinates_cylinder();
     void computeTexturecoordinates_sphere();

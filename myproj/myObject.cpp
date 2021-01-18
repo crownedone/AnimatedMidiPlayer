@@ -460,6 +460,11 @@ void myObject::rotate(glm::vec3 v, float angle)
     rotate(v.x, v.y, v.z, angle);
 }
 
+glm::vec3 myObject::getPos() const
+{
+    return glm::vec3(model_matrix[3]);
+}
+
 void myObject::computeTexturecoordinates_plane()
 {
     texturecoordinates.assign(vertices.size(), glm::vec2(0.0f, 0.0f));

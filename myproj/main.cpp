@@ -42,6 +42,13 @@
 
 /// Options::
 constexpr const bool moveLights = true;
+constexpr const float maxLanternTravelDist = 0.5; // uses manhattan distance
+
+
+// Dont change options:
+
+// The number of spheres each key can manage, increases computation time, but enables multiple spheres moving at the same time for a key.
+constexpr const bool nSpheresPerKey = 16;
 
 using namespace std;
 // SDL variables
@@ -55,7 +62,8 @@ bool windowsize_changed = true;
 bool crystalballorfirstperson_view = false;
 float movement_stepsize = DEFAULT_KEY_MOVEMENT_STEPSIZE;
 bool automoveCamera = true;
-int automoveCameraTimer = true;
+int automoveCameraTimerInit = 1500;
+int automoveCameraTimer = automoveCameraTimerInit;
 
 // speed vars
 const int FRAMES_PER_SECOND = 50;
@@ -137,7 +145,7 @@ void processEvents(SDL_Event current_event)
     case SDL_MOUSEMOTION:
     {
         automoveCamera = false;
-        automoveCameraTimer = 1500;
+        automoveCameraTimer = automoveCameraTimerInit;
 
         int x = current_event.motion.x;
         int y = current_event.motion.y;
@@ -193,7 +201,7 @@ struct keyBallHandler
         glm::vec3 end = key->objectAverage();
         auto gend = end - sphere_start;
 
-        // Init a number of different trajectories
+        // Initialize a number of different trajectories:
         for (auto& trajectory : trajectories)
         {
             trajectory.resize(FRAMES_PER_SECOND + 1, glm::vec3(0));
@@ -265,7 +273,7 @@ struct keyBallHandler
                 {
                     m_Key->translate(0, -0.005, 0);
                 }
-                if (a < 2)
+                if (a < 3)
                 {
                     m_KeyMaterial->kd = m_key_pressed;
                 }
@@ -276,13 +284,10 @@ struct keyBallHandler
                 m_Spheres[m_Spheresidx[i]]->translate(trajectories[m_Spheresidx[i]][-a] / 2.f); // half the impact
 
                 if (a > -5)
-                {
                     m_Key->translate(0, 0.005, 0);
-                }
-                if (a == -5)
-                {
+
+                else if (a == -5)
                     m_KeyMaterial->kd = m_key_white;
-                }
 
                 else if (a == -(FRAMES_PER_SECOND - 1))
                     m_Spheres[m_Spheresidx[i]]->model_matrix = glm::mat4(1.f);
@@ -295,30 +300,7 @@ struct keyBallHandler
             a--;
         }
 
-        //for (int i = m_DeActivate.size() - 1; i >= 0; --i)
-        //{
-        //    auto& a = m_DeActivate[i];
-        //    //if (a > 0)
-        //    //{
-        //    //    // balls movement:
-        //    //}
-        //    //else 
-        //    if (a == 0)
-        //    {
-        //        m_Key->translate(0, 0.02, 0);
-        //    }
-        //    //else if (a == -5)
-        //    //{
-        //    //    m_Key->translate(0, 0.02, 0);
-        //    //}
-        //
-        //    a--;
-        //
-        //    if (a < -10)
-        //        break; // no need to go further
-        //}
-
-        //100 activations per second max
+        //1000 activations per second max
         if (m_Activate.size() > 1000)
         {
             // erase the first 1000 as they will be inactive by now
@@ -382,11 +364,8 @@ inline bool isKey(const string& str)
         return false;
 
     for (int i = 0; i < 127; ++i)
-    {
         if (CxxMidi::Note::name(i) == str)
             return true;
-
-    }
     return false;
 }
 
@@ -450,8 +429,8 @@ int main(int argc, char* argv[])
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 
     glEnable(GL_MULTISAMPLE);
     glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_FASTEST);
@@ -459,58 +438,12 @@ int main(int argc, char* argv[])
     cam1 = new myCamera();
     SDL_GetWindowSize(window, &cam1->window_width, &cam1->window_height);
     cam1->moveBack(0.5f);
-    cam1->camera_eye = glm::vec3(0., 2., 2.);
+    cam1->camera_eye = glm::vec3(0., 1.5, 1.2);
     cam1->camera_forward = glm::normalize(glm::vec3(0.f, 0.5f, 0.f) - cam1->camera_eye);
     //cam1->camera_up = glm::cross()
     glm::mat3 cRotMat = glm::eulerAngleY(0.001);
 
     checkOpenGLInfo(true);
-
-
-    /**************************INITIALIZING FBO ***************************/
-    //plane will draw the color_texture of the framebufferobject fbo.
-    myWaterFBOs* waterFBOs = new myWaterFBOs();
-    waterFBOs->initWaterFBOs(cam1->window_width, cam1->window_height);
-
-    string dudvmap = "models/waterDUDV.png";
-    string waterNormalmap = "models/waterNormalMap.png";
-
-    // load water
-    //{
-    //    //reading a scene with texture coordinates and normals read from the obj file
-    //    auto obj = new myObject();
-    //    //obj->readObjects("models/Water.obj");
-    //    obj->readObjects("models/Lake.obj");
-    //    //obj->setTexture(new myTexture(cubemaps), mySubObject::CUBEMAP);
-    //    //obj->setTexture(new myTexture("models/cloud.jpg"), mySubObject::COLORMAP);
-    //    obj->setTexture(waterFBOs->reflectionFrameBuffer->colortexture, mySubObject::REFLECTIONMAP);
-    //    obj->setTexture(waterFBOs->refractionFrameBuffer->colortexture, mySubObject::REFRACTIONMAP);
-    //    obj->setTexture(new myTexture(dudvmap), mySubObject::DUDVMAP);
-    //    obj->setTexture(new myTexture(waterNormalmap), mySubObject::BUMPMAP);
-    //    obj->createmyVAO();
-    //    scene.addObjects(obj, "lake");
-    //
-    //    obj = new myObject();
-    //    //obj->readObjects("models/Water.obj");
-    //    obj->readObjects("models/Waterplane.obj");
-    //    //obj->setTexture(new myTexture(cubemaps), mySubObject::CUBEMAP);
-    //    //obj->setTexture(new myTexture("models/cloud.jpg"), mySubObject::COLORMAP);
-    //    obj->setTexture(waterFBOs->reflectionFrameBuffer->colortexture, mySubObject::REFLECTIONMAP);
-    //    obj->setTexture(waterFBOs->refractionFrameBuffer->colortexture, mySubObject::REFRACTIONMAP);
-    //    obj->setTexture(new myTexture(dudvmap), mySubObject::DUDVMAP);
-    //    obj->setTexture(new myTexture(waterNormalmap), mySubObject::BUMPMAP);
-    //    obj->createmyVAO();
-    //    scene.addObjects(obj, "waterAdvanced");
-    //
-    //
-    //    obj = new myObject();
-    //    obj->readObjects("models/Water.obj");
-    //    //obj->setTexture(new myTexture(cubemaps), mySubObject::CUBEMAP);
-    //    obj->setTexture(new myTexture("models/cloud.jpg"), mySubObject::COLORMAP);
-    //    obj->createmyVAO();
-    //    //obj->translate(glm::vec3(0, WATER_HEIGHT, 0));
-    //    scene.addObjects(obj, "water");
-    //}
 
     // skybox
     mySkybox* skybox;
@@ -521,16 +454,18 @@ int main(int argc, char* argv[])
         skybox->createmyVAO();
         scene.addObjects(skybox, "skybox");
     }
-    // load piano
+    // load piano (all static objects (that dont move))
     {
         auto obj = new myObject();
         obj->readObjects("models/piano_body.obj", false, false);
+        // obj->computeTexturecoordinates_sphere();
         obj->createmyVAO();
         scene.addObjects(obj, "piano_body");
     }
 
     std::vector<myObject*> lanterns;
-    std::vector<glm::vec3> lantern_tvec;
+    std::vector<glm::vec3> lantern_tvec; // actual moving vector
+    std::vector<glm::vec3> lantern_ovec; // actual position
     // lights / lanterns
     {
         scene.readObjectsFromFolder("models/lantern");
@@ -540,6 +475,7 @@ int main(int argc, char* argv[])
             if (lantern->name.find("lantern") != std::string::npos)
             {
                 lanterns.push_back(lantern);
+                lantern_ovec.push_back(glm::vec3(0));
                 if (moveLights)
                     lantern_tvec.push_back(glm::vec3(((std::rand() % 200) - 100) * 0.000001, ((std::rand() % 200) - 100) * 0.000001, ((std::rand() % 200) - 100) * 0.000001));
 
@@ -557,21 +493,6 @@ int main(int argc, char* argv[])
     // load piano keys
     scene.readObjectsFromFolder("models/piano_parts");
 
-
-    /**************************INITIALIZING OBJECTS THAT WILL BE DRAWN ***************************/
-    //myObject* obj;
-    //reading a scene with texture coordinates and normals read from the obj file
-    //obj = new myObject();
-    //scene->readObjects("models/bus/bus.obj", true);
-    //scene->readObjects("models/Pikachu/model.obj", true);
-    //obj->readObjects("models/piano_compl.obj", false, false);
-    //obj->scale(0.001f, 0.001f, 0.001f);
-    //obj->rotate(0, 1, 0, 1.57f);
-    //obj->translate(20.0f, 0.0f, 0.0f);
-    //obj->createmyVAO();
-
-    //std::map<string, bool> exclude_keys;
-
     auto s = new myObject();
     s->readObjects("models/Sphere.obj", false, false);
     s->createmyVAO();
@@ -579,7 +500,7 @@ int main(int argc, char* argv[])
     vector<vector<myObject*>> spheres(128);
     for (auto& sv : spheres)
     {
-        sv = s->createFromThis(16, true);
+        sv = s->createFromThis(nSpheresPerKey, true);
     }
 
     {
@@ -603,13 +524,8 @@ int main(int argc, char* argv[])
 
     /**************************SETTING UP OPENGL SHADERS ***************************/
     myShaders shaders;
-    //shaders.addShader(new myShader("shaders/basic-vertexshader.glsl", "shaders/basic-fragmentshader.glsl"), "shader_basic");
-    //shaders.addShader(new myShader("shaders/phong-vertexshader.glsl", "shaders/phong-fragmentshader.glsl"), "shader_phong");  
-    //shaders.addShader(new myShader("shaders/texture-vertexshader.glsl", "shaders/texture-fragmentshader.glsl"), "shader_texture");
     shaders.addShader(new myShader("shaders/texture+phong-vertexshader.glsl", "shaders/texture+phong-fragmentshader.glsl"), "shader_texturephong");
     shaders.addShader(new myShader("shaders/skybox-vertexshader.glsl", "shaders/skybox-fragmentshader.glsl"), "shader_skybox");
-    //shaders.addShader(new myShader("shaders/water-vertexshader.glsl", "shaders/water-fragmentshader.glsl"), "shader_water");
-    //shaders.addShader(new myShader("shaders/waterReflectRefrac-vertexshader.glsl", "shaders/waterReflectRefrac-fragmentshader.glsl"), "shader_advanced_water");
     myShader* curr_shader;
 
     int sleep_time = 0;
@@ -677,9 +593,15 @@ int main(int argc, char* argv[])
             {
                 lanterns[l]->translate(lantern_tvec[l]);
                 scene.lights->lights[l]->position += lantern_tvec[l];
+                lantern_ovec[l] += lantern_tvec[l];
 
                 // update direction:
-                lantern_tvec[l] += glm::vec3(((std::rand() % 200) - 100) * 0.0000001, ((std::rand() % 200) - 100) * 0.0000001, ((std::rand() % 200) - 100) * 0.0000001);
+                lantern_tvec[l] += glm::vec3(((std::rand() % 200) - 100) * 0.000001, ((std::rand() % 200) - 100) * 0.000001, ((std::rand() % 200) - 100) * 0.000001);
+
+                // moving back increasing with distance to home:
+                lantern_tvec[l] += (0.0001f * -lantern_ovec[l]);
+
+                //updateLanternMovingVec(lanterns[l]->getPos(), lantern_tvec[l]);
             }
         }
 
@@ -687,17 +609,6 @@ int main(int argc, char* argv[])
         {
             SDL_GetWindowSize(window, &cam1->window_width, &cam1->window_height);
             windowsize_changed = false;
-
-            if (waterFBOs) delete waterFBOs;
-            waterFBOs = new myWaterFBOs();
-            waterFBOs->initWaterFBOs(cam1->window_width, cam1->window_height);
-            //scene["plane1"]->setTexture(waterFBOs->reflectionFrameBuffer->colortexture, mySubObject::COLORMAP);
-            //scene["plane2"]->setTexture(waterFBOs->refractionFrameBuffer->colortexture, mySubObject::COLORMAP);
-            //scene["waterAdvanced"]->setTexture(waterFBOs->reflectionFrameBuffer->colortexture, mySubObject::REFLECTIONMAP);
-            //scene["waterAdvanced"]->setTexture(waterFBOs->refractionFrameBuffer->colortexture, mySubObject::REFRACTIONMAP);
-            //scene["lake"]->setTexture(waterFBOs->reflectionFrameBuffer->colortexture, mySubObject::REFLECTIONMAP);
-            //scene["lake"]->setTexture(waterFBOs->refractionFrameBuffer->colortexture, mySubObject::REFRACTIONMAP);
-            //scene["plane2"]->setTexture(fbo->colortexture, mySubObject::COLORMAP);
         }
 
         //Computing transformation matrices. Note that model_matrix will be computed and set in the displayScene function for each object separately
@@ -720,7 +631,6 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-
         curr_shader = shaders["shader_texturephong"];
         curr_shader->start();
         for (auto& o : scene.all_objects)
@@ -735,6 +645,7 @@ int main(int argc, char* argv[])
 
         // skybox->rotate();
         ((mySkybox*)scene["skybox"])->displayObjects(curr_shader, view_matrix, 0.0001f);
+
 
 
         /*-----------------------*/
