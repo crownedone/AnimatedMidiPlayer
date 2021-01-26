@@ -43,8 +43,8 @@
 
 /// Options::
 constexpr const bool moveLights = true;
-constexpr const float maxLanternTravelDist = 0.5; // uses manhattan distance
-
+// The ball movement trajecory can be randomized to enable different heights of projectile movements
+constexpr const bool randomizeTrajectories = false;
 
 // Dont change options:
 
@@ -208,7 +208,9 @@ struct keyBallHandler
             trajectory.resize(FRAMES_PER_SECOND + 1, glm::vec3(0));
 
             const double duration = 1.0; // s
-            double height = 0.5 + ((std::rand() % 200) - 100) * 0.001f; // m (randomly change the height to get some uniqueness in trajectories)
+            double height = 0.5;
+            if (randomizeTrajectories)
+                height += ((std::rand() % 200) - 100) * 0.001f; // m (randomly change the height to get some uniqueness in trajectories)
             double c = (2. / duration) * std::sqrt(height);
             auto f_t = [=](double t) {return static_cast<float>(-(c * t - std::sqrt(height)) * (c * t - std::sqrt(height)) + height); };
 
@@ -432,8 +434,8 @@ int main(int argc, char* argv[])
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+    glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
+    glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
 
     glEnable(GL_MULTISAMPLE);
     glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_FASTEST);
@@ -496,7 +498,7 @@ int main(int argc, char* argv[])
                 auto avg = lantern->objectAverage();
                 avg -= glm::vec3(0, 0.01, 0);
                 // add a light at the average vertices position of any lantern
-                scene.lights->lights.push_back(new myLight(avg, glm::vec3(0.2, 0.2, 0.2), myLight::POINTLIGHT));
+                scene.lights->lights.push_back(new myLight(avg, glm::vec3(0.5, 0.5, 0.5), myLight::POINTLIGHT));
 
             }
     }
