@@ -123,6 +123,22 @@ void myShader::stop() const
     glUseProgram(0);
 }
 
+GLint myShader::getAttributeLocation(std::string text)
+{
+    if (text_to_id.find(text) == text_to_id.end())
+    {
+        int location = glGetAttribLocation(shaderprogram, text.c_str());
+        if (location == -1)
+        {
+            //cerr << "Error: unable to get location of variable with name: " << text << endl;
+            return -1;
+        }
+        else text_to_id[text] = location;
+    }
+
+    return text_to_id[text];
+}
+
 GLint myShader::getUniformLocation(string text)
 {
     if (text_to_id.find(text) == text_to_id.end())

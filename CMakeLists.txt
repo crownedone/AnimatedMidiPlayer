@@ -2,11 +2,14 @@ cmake_minimum_required(FATAL_ERROR VERSION 3.0)
 
 project(myproject)
 
+add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
 find_package(Boost REQUIRED COMPONENTS system filesystem) 
 find_package(GLEW REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
+#find_package(freetype CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
-find_package(unofficial-nativefiledialog CONFIG REQUIRED)
+#find_package(unofficial-nativefiledialog CONFIG REQUIRED)
 find_path(STB_INCLUDE_DIRS "stb.h")
 
 include(FetchContent)
@@ -19,7 +22,6 @@ FetchContent_Populate(
 )
  
 SET(SOURCE 
-
 ${CMAKE_CURRENT_LIST_DIR}/myproj/default_constants.h
 ${CMAKE_CURRENT_LIST_DIR}/myproj/errors.h
 ${CMAKE_CURRENT_LIST_DIR}/myproj/helperFunctions.h
@@ -54,22 +56,28 @@ ${CMAKE_CURRENT_LIST_DIR}/myproj/myWaterFBOs.h
 ${CMAKE_CURRENT_LIST_DIR}/myproj/myWaterFBOs.cpp
 ${CMAKE_CURRENT_LIST_DIR}/myproj/mySkybox.h
 ${CMAKE_CURRENT_LIST_DIR}/myproj/mySkybox.cpp
+#${CMAKE_CURRENT_LIST_DIR}/myproj/myText.h
+#${CMAKE_CURRENT_LIST_DIR}/myproj/myText.cpp
 )
  
  
 add_executable(${PROJECT_NAME} ${SOURCE})
-target_link_libraries(${PROJECT_NAME} PRIVATE unofficial::nativefiledialog::nfd)
+#target_link_libraries(${PROJECT_NAME} PRIVATE unofficial::nativefiledialog::nfd)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main)
 target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW) 
 target_link_libraries(${PROJECT_NAME} PRIVATE Boost::system Boost::filesystem) 
+#target_link_libraries(${PROJECT_NAME} PRIVATE freetype) 
 
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE winmm.lib)
-elseif(UNIX)
+elseif(UNIX AND NOT APPLE)     
     find_package(ALSA REQUIRED)
-    target_include_directories(PROJECT_NAME PRIVATE ${ALSA_INCLUDE_DIRS})                  
+    target_include_directories(PROJECT_NAME PRIVATE ${ALSA_INCLUDE_DIRS})
     target_link_libraries (${PROJECT_NAME} PRIVATE ${ALSA_LIBRARIES})
+    elseif(APPLE)
+    FIND_LIBRARY(COREAUDIO_LIBRARY CoreAudio)
+    FIND_LIBRARY(COREFOUNDATION_LIBRARY CoreFoundation) 
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${STB_INCLUDE_DIRS})

@@ -22,7 +22,6 @@
 #include "myShader.h"
 #include "myCamera.h"
 #include "mySubObject.h"
-#include "myWaterFBOs.h"
 #include "mySkybox.h"
 #include <glm/glm.hpp>
 #include <glm/gtx/euler_angles.hpp>
@@ -40,6 +39,8 @@
 
 #include <mutex>
 
+#define GET_TICK_CNT() std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()
+
 /// Options::
 constexpr const bool moveLights = true;
 constexpr const float maxLanternTravelDist = 0.5; // uses manhattan distance
@@ -48,7 +49,7 @@ constexpr const float maxLanternTravelDist = 0.5; // uses manhattan distance
 // Dont change options:
 
 // The number of spheres each key can manage, increases computation time, but enables multiple spheres moving at the same time for a key.
-constexpr const bool nSpheresPerKey = 16;
+constexpr const int nSpheresPerKey = 16;
 
 using namespace std;
 // SDL variables
@@ -195,7 +196,7 @@ struct keyBallHandler
         // Calculate the trace from sphere to key to access it fast later.
 
 
-        nSpheres = spheres.size();
+        nSpheres = static_cast<int>(spheres.size());
         trajectories.resize(nSpheres);
         sphere_start = spheres[0]->objectAverage();
         glm::vec3 end = key->objectAverage();
@@ -206,7 +207,7 @@ struct keyBallHandler
         {
             trajectory.resize(FRAMES_PER_SECOND + 1, glm::vec3(0));
 
-            const double duration = 1.; // s
+            const double duration = 1.0; // s
             double height = 0.5 + ((std::rand() % 200) - 100) * 0.001f; // m (randomly change the height to get some uniqueness in trajectories)
             double c = (2. / duration) * std::sqrt(height);
             auto f_t = [=](double t) {return static_cast<float>(-(c * t - std::sqrt(height)) * (c * t - std::sqrt(height)) + height); };
@@ -261,7 +262,7 @@ struct keyBallHandler
         //std::lock_guard<mutex> lock(m_Mutex);
 
         // last 16 activations
-        for (int i = m_Activate.size() - 1; i >= std::max(0, static_cast<int>(m_Activate.size()) - 17); --i)
+        for (int i = static_cast<int>(m_Activate.size()) - 1; i >= std::max(0, static_cast<int>(m_Activate.size()) - nSpheresPerKey - 1); --i)
         {
             auto& a = m_Activate[i];
             if (a >= 0)
@@ -271,7 +272,7 @@ struct keyBallHandler
 
                 if (a < 4)
                 {
-                    m_Key->translate(0, -0.005, 0);
+                    m_Key->translate(0.f, -0.005f, 0.f);
                 }
                 if (a < 3)
                 {
@@ -279,17 +280,17 @@ struct keyBallHandler
                 }
 
             }
-            else if (a > -FRAMES_PER_SECOND) // a < 0
+            else if (a > -FRAMES_PER_SECOND / 2) // a < 0
             {
-                m_Spheres[m_Spheresidx[i]]->translate(trajectories[m_Spheresidx[i]][-a] / 2.f); // half the impact
+                m_Spheres[m_Spheresidx[i]]->translate(trajectories[m_Spheresidx[i]][min(2 * -a, FRAMES_PER_SECOND - 1)] / 2.f); // half the impact and duration
 
                 if (a > -5)
-                    m_Key->translate(0, 0.005, 0);
+                    m_Key->translate(0.f, 0.005f, 0.f);
 
-                else if (a == -5)
+                if (a == -5)
                     m_KeyMaterial->kd = m_key_white;
 
-                else if (a == -(FRAMES_PER_SECOND - 1))
+                else if (a == ((-FRAMES_PER_SECOND / 2) + 1))
                     m_Spheres[m_Spheresidx[i]]->model_matrix = glm::mat4(1.f);
             }
             else
@@ -300,12 +301,12 @@ struct keyBallHandler
             a--;
         }
 
-        //1000 activations per second max
-        if (m_Activate.size() > 1000)
+        //100 activations per second max
+        if (m_Activate.size() > 100)
         {
-            // erase the first 1000 as they will be inactive by now
-            m_Activate.erase(m_Activate.begin(), m_Activate.end() - 1000);
-            m_Spheresidx.erase(m_Spheresidx.begin(), m_Spheresidx.end() - 1000);
+            // erase the first 100 as they will be inactive by now
+            m_Activate.erase(m_Activate.begin(), m_Activate.end() - 100);
+            m_Spheresidx.erase(m_Spheresidx.begin(), m_Spheresidx.end() - 100);
         }
     }
 
@@ -407,10 +408,12 @@ int main(int argc, char* argv[])
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
+
     // Create window
     window = nullptr;
     window = SDL_CreateWindow("IN4I24", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+
 
     // Create OpenGL context
     glContext = SDL_GL_CreateContext(window);
@@ -435,6 +438,17 @@ int main(int argc, char* argv[])
     glEnable(GL_MULTISAMPLE);
     glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_FASTEST);
 
+    /* We require 1 byte alignment when uploading texture data */
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    /* Clamping to edges is important to prevent artifacts when scaling */
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    /* Linear filtering usually looks best for text */
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     cam1 = new myCamera();
     SDL_GetWindowSize(window, &cam1->window_width, &cam1->window_height);
     cam1->moveBack(0.5f);
@@ -458,7 +472,7 @@ int main(int argc, char* argv[])
     {
         auto obj = new myObject();
         obj->readObjects("models/piano_body.obj", false, false);
-        // obj->computeTexturecoordinates_sphere();
+        obj->computeTexturecoordinates_sphere();
         obj->createmyVAO();
         scene.addObjects(obj, "piano_body");
     }
@@ -482,7 +496,7 @@ int main(int argc, char* argv[])
                 auto avg = lantern->objectAverage();
                 avg -= glm::vec3(0, 0.01, 0);
                 // add a light at the average vertices position of any lantern
-                scene.lights->lights.push_back(new myLight(avg, glm::vec3(0.4, 0.4, 0.4), myLight::POINTLIGHT));
+                scene.lights->lights.push_back(new myLight(avg, glm::vec3(0.2, 0.2, 0.2), myLight::POINTLIGHT));
 
             }
     }
@@ -526,9 +540,10 @@ int main(int argc, char* argv[])
     myShaders shaders;
     shaders.addShader(new myShader("shaders/texture+phong-vertexshader.glsl", "shaders/texture+phong-fragmentshader.glsl"), "shader_texturephong");
     shaders.addShader(new myShader("shaders/skybox-vertexshader.glsl", "shaders/skybox-fragmentshader.glsl"), "shader_skybox");
+
     myShader* curr_shader;
 
-    int sleep_time = 0;
+    int64_t sleep_time = 0;
 
     atomic_bool playSound = false;
     atomic_bool playKeys = false;
@@ -546,23 +561,22 @@ int main(int argc, char* argv[])
 
     });
 
-    DWORD next_game_tick = GetTickCount();
-    DWORD start_render = GetTickCount();
-
+    int64_t next_game_tick = GET_TICK_CNT();
+    int64_t start_render = GET_TICK_CNT();
 
     // display loop
     while (!quit)
     {
         if (!playSound)
         {
-            if (GetTickCount() - start_render > 6950) // 1 second of delay
+            if (GET_TICK_CNT() - start_render > 6950) // 1 second of delay
             {
                 playSound = true;// very broad sense of synchronization (none). We expect that it runs more or less synchron
             }
         }
         if (!playKeys)
         {
-            if (GetTickCount() - start_render > 6000)
+            if (GET_TICK_CNT() - start_render > 6000)
             {
                 playKeys = true; // very broad sense of synchronization (none). We expect that it runs more or less synchron
             }
@@ -646,8 +660,6 @@ int main(int argc, char* argv[])
         // skybox->rotate();
         ((mySkybox*)scene["skybox"])->displayObjects(curr_shader, view_matrix, 0.0001f);
 
-
-
         /*-----------------------*/
         // update all moving objects
         {
@@ -665,7 +677,7 @@ int main(int argc, char* argv[])
             processEvents(current_event);
 
         next_game_tick += SKIP_TICKS;
-        sleep_time = next_game_tick - GetTickCount();
+        sleep_time = next_game_tick - GET_TICK_CNT();
 
         if (automoveCameraTimer > 0)
         {
@@ -676,7 +688,6 @@ int main(int argc, char* argv[])
 
 
         if (sleep_time >= 0) {
-            //cout << "Left " << sleep_time << " ms" << endl;
             this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
         }
         else {
@@ -685,6 +696,7 @@ int main(int argc, char* argv[])
     }
 
     // Freeing resources before exiting.
+
 
     // Destroy window
     if (glContext) SDL_GL_DeleteContext(glContext);

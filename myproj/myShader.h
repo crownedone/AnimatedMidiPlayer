@@ -25,6 +25,7 @@ public:
     void start() const;
     void stop() const;
 
+    GLint getAttributeLocation(std::string name);
     GLint getUniformLocation(std::string name);
 
     void setUniform(std::string name, glm::mat4&);
