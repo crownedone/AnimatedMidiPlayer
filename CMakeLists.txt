@@ -4,7 +4,7 @@ project(myproject)
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
-find_package(Boost REQUIRED COMPONENTS system filesystem) 
+find_package(Boost REQUIRED COMPONENTS filesystem) 
 find_package(GLEW REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 #find_package(freetype CONFIG REQUIRED)
@@ -62,11 +62,12 @@ ${CMAKE_CURRENT_LIST_DIR}/myproj/mySkybox.cpp
  
  
 add_executable(${PROJECT_NAME} ${SOURCE})
+
 #target_link_libraries(${PROJECT_NAME} PRIVATE unofficial::nativefiledialog::nfd)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main)
 target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW) 
-target_link_libraries(${PROJECT_NAME} PRIVATE Boost::system Boost::filesystem) 
+target_link_libraries(${PROJECT_NAME} PRIVATE Boost::filesystem) 
 #target_link_libraries(${PROJECT_NAME} PRIVATE freetype) 
 
 if(WIN32)
@@ -99,5 +100,5 @@ add_custom_command(
          TARGET ${PROJECT_NAME} POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_directory             
              ${CMAKE_CURRENT_SOURCE_DIR}/myproj/midi ${CMAKE_CURRENT_BINARY_DIR}/
-         COMMENT "Copying models" VERBATIM
+         COMMENT "Copying midi" VERBATIM
          )
